@@ -13,12 +13,12 @@ use error::{Error, Result};
 ///
 /// Note that only maps and structs can be decoded, because the NBT format does
 /// not support bare types. Other types will return `Error::NoRootCompound`.
-pub fn from_reader<R, T>(src: R) -> Result<T>
+pub fn from_reader<R, T>(src: R, endian: raw::Endianness) -> Result<T>
 where
     R: io::Read,
     T: de::DeserializeOwned,
 {
-    let mut decoder = Decoder::new(src);
+    let mut decoder = Decoder::new(src, endian);
     de::Deserialize::deserialize(&mut decoder)
 }
 
@@ -26,26 +26,26 @@ where
 ///
 /// Note that only maps and structs can be decoded, because the NBT format does
 /// not support bare types. Other types will return `Error::NoRootCompound`.
-pub fn from_gzip_reader<R, T>(src: R) -> Result<T>
+pub fn from_gzip_reader<R, T>(src: R, endian: raw::Endianness) -> Result<T>
 where
     R: io::Read,
     T: de::DeserializeOwned,
 {
     let gzip = read::GzDecoder::new(src);
-    from_reader(gzip)
+    from_reader(gzip, endian)
 }
 
 /// Decode an object from Named Binary Tag (NBT) format.
 ///
 /// Note that only maps and structs can be decoded, because the NBT format does
 /// not support bare types. Other types will return `Error::NoRootCompound`.
-pub fn from_zlib_reader<R, T>(src: R) -> Result<T>
+pub fn from_zlib_reader<R, T>(src: R, endian: raw::Endianness) -> Result<T>
 where
     R: io::Read,
     T: de::DeserializeOwned,
 {
     let zlib = read::ZlibDecoder::new(src);
-    from_reader(zlib)
+    from_reader(zlib, endian)
 }
 
 /// Decode objects from Named Binary Tag (NBT) format.
@@ -54,6 +54,7 @@ where
 /// not support bare types. Other types will return `Error::NoRootCompound`.
 pub struct Decoder<R> {
     reader: R,
+    endian: raw::Endianness,
 }
 
 impl<R> Decoder<R>
@@ -61,8 +62,11 @@ where
     R: io::Read,
 {
     /// Create an NBT Decoder from a given `io::Read` source.
-    pub fn new(src: R) -> Self {
-        Decoder { reader: src }
+    pub fn new(src: R, endian: raw::Endianness) -> Self {
+        Decoder {
+            reader: src,
+            endian: endian,
+        }
     }
 }
 
@@ -110,7 +114,7 @@ impl<'de: 'a, 'a, R: io::Read> de::Deserializer<'de> for &'a mut Decoder<R> {
         V: de::Visitor<'de>,
     {
         // Ignore the header (if there is one).
-        let (tag, _) = raw::emit_next_header(&mut self.reader)?;
+        let (tag, _) = raw::emit_next_header(&mut self.reader, self.endian)?;
 
         match tag {
             0x0a => visitor.visit_map(MapDecoder::new(self)),
@@ -194,7 +198,7 @@ where
 {
     fn list(outer: &'a mut Decoder<R>) -> Result<Self> {
         let tag = raw::read_bare_byte(&mut outer.reader)?;
-        let length = raw::read_bare_int(&mut outer.reader)?;
+        let length = raw::read_bare_int(&mut outer.reader, outer.endian)?;
         Ok(SeqDecoder {
             outer,
             tag: tag as u8,
@@ -204,7 +208,7 @@ where
     }
 
     fn byte_array(outer: &'a mut Decoder<R>) -> Result<Self> {
-        let length = raw::read_bare_int(&mut outer.reader)?;
+        let length = raw::read_bare_int(&mut outer.reader, outer.endian)?;
         Ok(SeqDecoder {
             outer,
             tag: 0x01,
@@ -214,7 +218,7 @@ where
     }
 
     fn int_array(outer: &'a mut Decoder<R>) -> Result<Self> {
-        let length = raw::read_bare_int(&mut outer.reader)?;
+        let length = raw::read_bare_int(&mut outer.reader, outer.endian)?;
         Ok(SeqDecoder {
             outer,
             tag: 0x03,
@@ -224,7 +228,7 @@ where
     }
 
     fn long_array(outer: &'a mut Decoder<R>) -> Result<Self> {
-        let length = raw::read_bare_int(&mut outer.reader)?;
+        let length = raw::read_bare_int(&mut outer.reader, outer.endian)?;
         Ok(SeqDecoder {
             outer,
             tag: 0x04,
@@ -279,13 +283,13 @@ impl<'a, 'b: 'a, 'de, R: io::Read> de::Deserializer<'de> for &'b mut InnerDecode
 
         match self.tag {
             0x01 => visitor.visit_i8(raw::read_bare_byte(&mut outer.reader)?),
-            0x02 => visitor.visit_i16(raw::read_bare_short(&mut outer.reader)?),
-            0x03 => visitor.visit_i32(raw::read_bare_int(&mut outer.reader)?),
-            0x04 => visitor.visit_i64(raw::read_bare_long(&mut outer.reader)?),
-            0x05 => visitor.visit_f32(raw::read_bare_float(&mut outer.reader)?),
-            0x06 => visitor.visit_f64(raw::read_bare_double(&mut outer.reader)?),
+            0x02 => visitor.visit_i16(raw::read_bare_short(&mut outer.reader, outer.endian)?),
+            0x03 => visitor.visit_i32(raw::read_bare_int(&mut outer.reader, outer.endian)?),
+            0x04 => visitor.visit_i64(raw::read_bare_long(&mut outer.reader, outer.endian)?),
+            0x05 => visitor.visit_f32(raw::read_bare_float(&mut outer.reader, outer.endian)?),
+            0x06 => visitor.visit_f64(raw::read_bare_double(&mut outer.reader, outer.endian)?),
             0x07 => visitor.visit_seq(SeqDecoder::byte_array(outer)?),
-            0x08 => visitor.visit_string(raw::read_bare_string(&mut outer.reader)?),
+            0x08 => visitor.visit_string(raw::read_bare_string(&mut outer.reader, outer.endian)?),
             0x09 => visitor.visit_seq(SeqDecoder::list(outer)?),
             0x0a => visitor.visit_map(MapDecoder::new(outer)),
             0x0b => visitor.visit_seq(SeqDecoder::int_array(outer)?),

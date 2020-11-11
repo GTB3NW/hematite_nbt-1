@@ -5,8 +5,8 @@ use std::env;
 use std::fs;
 use std::process::exit;
 
-use nbt::Blob;
 use nbt::Result;
+use nbt::{Blob, Endianness};
 
 fn run() -> Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -15,7 +15,7 @@ fn run() -> Result<()> {
         println!(
             "================================= NBT Contents ================================="
         );
-        let blob = Blob::from_reader(&mut file)?;
+        let blob = Blob::from_reader(&mut file, Endianness::BigEndian)?;
         println!("{}", blob);
         println!(
             "============================== JSON Representation ============================="

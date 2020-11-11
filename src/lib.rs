@@ -7,6 +7,7 @@ extern crate flate2;
 /* Re-export the core API from submodules. */
 pub use blob::Blob;
 pub use error::{Error, Result};
+pub use raw::Endianness;
 pub use value::Value;
 
 #[cfg(feature = "preserve_order")]

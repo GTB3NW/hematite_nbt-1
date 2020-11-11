@@ -62,18 +62,18 @@ impl Blob {
     }
 
     /// Extracts an `Blob` object from an `io::Read` source.
-    pub fn from_reader<R>(src: &mut R) -> Result<Blob>
+    pub fn from_reader<R>(src: &mut R, endian: raw::Endianness) -> Result<Blob>
     where
         R: io::Read,
     {
-        let (tag, title) = raw::emit_next_header(src)?;
+        let (tag, title) = raw::emit_next_header(src, endian)?;
         // Although it would be possible to read NBT format files composed of
         // arbitrary objects using the current API, by convention all files
         // have a top-level Compound.
         if tag != 0x0a {
             return Err(Error::NoRootCompound);
         }
-        let content = Value::from_reader(tag, src)?;
+        let content = Value::from_reader(tag, src, endian)?;
         match content {
             Value::Compound(map) => Ok(Blob {
                 title,
@@ -85,22 +85,22 @@ impl Blob {
 
     /// Extracts an `Blob` object from an `io::Read` source that is
     /// compressed using the Gzip format.
-    pub fn from_gzip_reader<R>(src: &mut R) -> Result<Blob>
+    pub fn from_gzip_reader<R>(src: &mut R, endian: raw::Endianness) -> Result<Blob>
     where
         R: io::Read,
     {
         // Reads the gzip header, and fails if it is incorrect.
         let mut data = GzDecoder::new(src);
-        Blob::from_reader(&mut data)
+        Blob::from_reader(&mut data, endian)
     }
 
     /// Extracts an `Blob` object from an `io::Read` source that is
     /// compressed using the zlib format.
-    pub fn from_zlib_reader<R>(src: &mut R) -> Result<Blob>
+    pub fn from_zlib_reader<R>(src: &mut R, endian: raw::Endianness) -> Result<Blob>
     where
         R: io::Read,
     {
-        Blob::from_reader(&mut ZlibDecoder::new(src))
+        Blob::from_reader(&mut ZlibDecoder::new(src), endian)
     }
 
     /// Writes the binary representation of this `Blob` to an `io::Write`
