@@ -11,6 +11,7 @@ use flate2::Compression;
 use error::{Error, Result};
 use raw;
 use value::Value;
+use Endianness;
 
 /// A generic, complete object in Named Binary Tag format.
 ///

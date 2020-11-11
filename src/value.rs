@@ -1,8 +1,8 @@
-use crate::Map;
+use crate::{Endianness, Map};
 use std::fmt;
 use std::io;
 
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use error::{Error, Result};
 use raw;
@@ -132,7 +132,10 @@ impl Value {
             0x09 => {
                 // List
                 let id = src.read_u8()?;
-                let len = src.read_i32::<BigEndian>()? as usize;
+                let len = match endian {
+                    Endianness::LittleEndian => src.read_i32::<LittleEndian>()? as usize,
+                    Endianness::BigEndian => src.read_i32::<BigEndian>()? as usize,
+                };
                 let mut buf = Vec::with_capacity(len);
                 for _ in 0..len {
                     buf.push(Value::from_reader(id, src, endian)?);

@@ -267,8 +267,8 @@ where
     R: io::Read,
 {
     let len = match endian {
-        Endianness::LittleEndian => src.read_i32::<LittleEndian>()? as usize,
-        Endianness::BigEndian => src.read_i32::<BigEndian>()? as usize,
+        Endianness::LittleEndian => src.read_u16::<LittleEndian>()? as usize,
+        Endianness::BigEndian => src.read_u16::<BigEndian>()? as usize,
     };
 
     if len == 0 {
