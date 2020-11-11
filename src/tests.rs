@@ -48,7 +48,7 @@ fn nbt_nonempty() {
 
     // Test correct length and contents when field order is preserved
     let mut dst = Vec::new();
-    nbt.to_writer(&mut dst).unwrap();
+    nbt.to_writer(&mut dst, Endianness::BigEndian).unwrap();
     assert_eq!(&bytes.len(), &dst.len());
     #[cfg(feature = "preserve_order")]
     assert_eq!(&bytes, &dst);
@@ -75,7 +75,7 @@ fn nbt_empty_nbtfile() {
 
     // Test encoding.
     let mut dst = Vec::new();
-    nbt.to_writer(&mut dst).unwrap();
+    nbt.to_writer(&mut dst, Endianness::BigEndian).unwrap();
     assert_eq!(&dst, &bytes);
 
     // Test decoding.
@@ -108,7 +108,7 @@ fn nbt_nested_compound() {
 
     // Test encoding.
     let mut dst = Vec::new();
-    nbt.to_writer(&mut dst).unwrap();
+    nbt.to_writer(&mut dst, Endianness::BigEndian).unwrap();
     assert_eq!(&dst, &bytes);
 
     // Test decoding.
@@ -136,7 +136,7 @@ fn nbt_empty_list() {
 
     // Test encoding.
     let mut dst = Vec::new();
-    nbt.to_writer(&mut dst).unwrap();
+    nbt.to_writer(&mut dst, Endianness::BigEndian).unwrap();
     assert_eq!(&dst, &bytes);
 
     // Test decoding.
@@ -174,7 +174,7 @@ fn nbt_nested_list() {
 
     // Test encoding.
     let mut dst = Vec::new();
-    nbt.to_writer(&mut dst).unwrap();
+    nbt.to_writer(&mut dst, Endianness::BigEndian).unwrap();
     assert_eq!(&dst, &bytes);
 
     // Test decoding.
@@ -269,14 +269,16 @@ fn nbt_compression() {
 
     // Test zlib encoding/decoding.
     let mut zlib_dst = Vec::new();
-    nbt.to_zlib_writer(&mut zlib_dst).unwrap();
+    nbt.to_zlib_writer(&mut zlib_dst, Endianness::BigEndian)
+        .unwrap();
     let zlib_file =
         Blob::from_zlib_reader(&mut io::Cursor::new(zlib_dst), Endianness::BigEndian).unwrap();
     assert_eq!(&nbt, &zlib_file);
 
     // Test gzip encoding/decoding.
     let mut gzip_dst = Vec::new();
-    nbt.to_gzip_writer(&mut gzip_dst).unwrap();
+    nbt.to_gzip_writer(&mut gzip_dst, Endianness::BigEndian)
+        .unwrap();
     let gz_file =
         Blob::from_gzip_reader(&mut io::Cursor::new(gzip_dst), Endianness::BigEndian).unwrap();
     assert_eq!(&nbt, &gz_file);
@@ -288,7 +290,7 @@ fn nbt_bigtest() {
     let bigtest = Blob::from_gzip_reader(&mut bigtest_file, Endianness::BigEndian).unwrap();
     // This is a pretty indirect way of testing correctness.
     let mut dst = Vec::new();
-    bigtest.to_writer(&mut dst).unwrap();
+    bigtest.to_writer(&mut dst, Endianness::BigEndian).unwrap();
     assert_eq!(1544, dst.len());
 }
 
@@ -359,7 +361,7 @@ fn serde_blob() {
     let file: Blob = from_reader(&mut src, Endianness::BigEndian).unwrap();
     assert_eq!(&file, &nbt);
     let mut dst = Vec::new();
-    to_writer(&mut dst, &nbt, None).unwrap();
+    to_writer(&mut dst, &nbt, None, Endianness::BigEndian).unwrap();
     // When the preserve_order feature is not enabled,
     // we can only test if the decoded bytes match, since the HashMap does
     // not guarantee order (and so encoding is likely to be different, but
@@ -389,7 +391,7 @@ fn nbt_modified_utf8() {
 
     // Test encoding.
     let mut dst = Vec::new();
-    nbt.to_writer(&mut dst).unwrap();
+    nbt.to_writer(&mut dst, Endianness::BigEndian).unwrap();
     assert_eq!(&dst, &bytes);
 
     // Test decoding.
@@ -437,7 +439,7 @@ fn nbt_sizes() {
 
     // Write out the blob
     let mut cursor = std::io::Cursor::new(vec![]);
-    root.to_writer(&mut cursor).unwrap();
+    root.to_writer(&mut cursor, Endianness::BigEndian).unwrap();
 
     assert_eq!(cursor.position() as usize, root.len_bytes());
 }

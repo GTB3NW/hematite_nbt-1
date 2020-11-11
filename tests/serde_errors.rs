@@ -13,7 +13,7 @@ fn no_root_compound() {
     let nbt: i8 = 100;
 
     let mut dst = Vec::new();
-    let write = to_writer(&mut dst, &nbt, None);
+    let write = to_writer(&mut dst, &nbt, None, Endianness::BigEndian);
 
     assert!(write.is_err());
     match write.unwrap_err() {

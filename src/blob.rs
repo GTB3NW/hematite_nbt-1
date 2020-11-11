@@ -25,6 +25,7 @@ use Endianness;
 ///
 /// ```rust
 /// use nbt::{Blob, Value};
+/// use nbt::Endianness;
 ///
 /// // Create a `Blob` from key/value pairs.
 /// let mut nbt = Blob::new();
@@ -34,7 +35,7 @@ use Endianness;
 ///
 /// // Write a compressed binary representation to a byte array.
 /// let mut dst = Vec::new();
-/// nbt.to_zlib_writer(&mut dst).unwrap();
+/// nbt.to_zlib_writer(&mut dst, Endianness::BigEndian).unwrap();
 /// ```
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Blob {

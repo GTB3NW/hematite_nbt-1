@@ -719,6 +719,7 @@ impl ser::SerializeMap for NoOp {
 /// extern crate serde;
 /// use nbt::to_writer;
 /// use serde::Serialize;
+/// use nbt::Endianness;
 ///
 /// let mut serialized = Vec::new();
 ///
@@ -735,7 +736,8 @@ impl ser::SerializeMap for NoOp {
 ///     &Sheep {
 ///         byte_data: vec![0x62, 0x69, 0x6E, 0x61, 0x72, 0x79, 0x20, 0x73, 0x68, 0x65, 0x65, 0x70],
 ///     },
-///     None
+///     None,
+///     Endianness::BigEndian
 /// ).unwrap();
 ///
 /// print!("Serialized: {:?}", serialized);
@@ -759,6 +761,7 @@ where
 /// extern crate serde;
 /// use nbt::to_writer;
 /// use serde::Serialize;
+/// use nbt::Endianness;
 ///
 /// let mut serialized = Vec::new();
 ///
@@ -775,7 +778,8 @@ where
 ///     &Cow {
 ///         int_data: vec![1, 8, 64, 512, 4096, 32768, 262144],
 ///     },
-///     None
+///     None,
+///     Endianness::BigEndian
 /// ).unwrap();
 ///
 /// print!("Serialized: {:?}", serialized);
@@ -799,6 +803,7 @@ where
 /// extern crate serde;
 /// use nbt::to_writer;
 /// use serde::Serialize;
+/// use nbt::Endianness;
 ///
 /// let mut serialized = Vec::new();
 ///
@@ -815,7 +820,8 @@ where
 ///     &Enderman {
 ///         long_data: vec![0x1848ccd2157df10e, 0x64c5efff28280e9a],
 ///     },
-///     None
+///     None,
+///     Endianness::BigEndian
 /// ).unwrap();
 ///
 /// print!("Serialized: {:?}", serialized);
