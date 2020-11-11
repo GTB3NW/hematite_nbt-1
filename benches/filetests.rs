@@ -51,12 +51,14 @@ where
     });
     group.bench_function("Serialize As Struct", |b| {
         b.iter(|| {
-            to_writer(&mut io::sink(), &nbt_struct, None).unwrap();
+            to_writer(&mut io::sink(), &nbt_struct, None, Endianness::BigEndian).unwrap();
         })
     });
     group.bench_function("Serialize As Blob", |b| {
         b.iter(|| {
-            nbt_blob.to_writer(&mut io::sink()).unwrap();
+            nbt_blob
+                .to_writer(&mut io::sink(), Endianness::BigEndian)
+                .unwrap();
         })
     });
     group.finish();
