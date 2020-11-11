@@ -63,7 +63,7 @@ impl Blob {
     }
 
     /// Extracts an `Blob` object from an `io::Read` source.
-    pub fn from_reader<R>(src: &mut R, endian: raw::Endianness) -> Result<Blob>
+    pub fn from_reader<R>(src: &mut R, endian: Endianness) -> Result<Blob>
     where
         R: io::Read,
     {
@@ -86,7 +86,7 @@ impl Blob {
 
     /// Extracts an `Blob` object from an `io::Read` source that is
     /// compressed using the Gzip format.
-    pub fn from_gzip_reader<R>(src: &mut R, endian: raw::Endianness) -> Result<Blob>
+    pub fn from_gzip_reader<R>(src: &mut R, endian: Endianness) -> Result<Blob>
     where
         R: io::Read,
     {
@@ -97,7 +97,7 @@ impl Blob {
 
     /// Extracts an `Blob` object from an `io::Read` source that is
     /// compressed using the zlib format.
-    pub fn from_zlib_reader<R>(src: &mut R, endian: raw::Endianness) -> Result<Blob>
+    pub fn from_zlib_reader<R>(src: &mut R, endian: Endianness) -> Result<Blob>
     where
         R: io::Read,
     {
