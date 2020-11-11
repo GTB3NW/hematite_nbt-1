@@ -66,19 +66,19 @@ impl Value {
     }
 
     /// Writes the payload of this `Value` to an `io::Write` destination.
-    pub fn to_writer<W>(&self, mut dst: &mut W) -> Result<()>
+    pub fn to_writer<W>(&self, mut dst: &mut W, endian: raw::Endianness) -> Result<()>
     where
         W: io::Write,
     {
         match *self {
             Value::Byte(val) => raw::write_bare_byte(dst, val),
-            Value::Short(val) => raw::write_bare_short(dst, val),
-            Value::Int(val) => raw::write_bare_int(dst, val),
-            Value::Long(val) => raw::write_bare_long(dst, val),
-            Value::Float(val) => raw::write_bare_float(dst, val),
-            Value::Double(val) => raw::write_bare_double(dst, val),
-            Value::ByteArray(ref vals) => raw::write_bare_byte_array(dst, &vals[..]),
-            Value::String(ref val) => raw::write_bare_string(dst, &val),
+            Value::Short(val) => raw::write_bare_short(dst, val, endian),
+            Value::Int(val) => raw::write_bare_int(dst, val, endian),
+            Value::Long(val) => raw::write_bare_long(dst, val, endian),
+            Value::Float(val) => raw::write_bare_float(dst, val, endian),
+            Value::Double(val) => raw::write_bare_double(dst, val, endian),
+            Value::ByteArray(ref vals) => raw::write_bare_byte_array(dst, &vals[..], endian),
+            Value::String(ref val) => raw::write_bare_string(dst, &val, endian),
             Value::List(ref vals) => {
                 // This is a bit of a trick: if the list is empty, don't bother
                 // checking its type.
@@ -95,7 +95,7 @@ impl Value {
                         if nbt.id() != first_id {
                             return Err(Error::HeterogeneousList);
                         }
-                        nbt.to_writer(dst)?;
+                        nbt.to_writer(dst, endian)?;
                     }
                 }
                 Ok(())
@@ -104,13 +104,13 @@ impl Value {
                 for (name, ref nbt) in vals {
                     // Write the header for the tag.
                     dst.write_u8(nbt.id())?;
-                    raw::write_bare_string(dst, name)?;
-                    nbt.to_writer(dst)?;
+                    raw::write_bare_string(dst, name, endian)?;
+                    nbt.to_writer(dst, endian)?;
                 }
                 raw::close_nbt(&mut dst)
             }
-            Value::IntArray(ref vals) => raw::write_bare_int_array(dst, &vals[..]),
-            Value::LongArray(ref vals) => raw::write_bare_long_array(dst, &vals[..]),
+            Value::IntArray(ref vals) => raw::write_bare_int_array(dst, &vals[..], endian),
+            Value::LongArray(ref vals) => raw::write_bare_long_array(dst, &vals[..], endian),
         }
     }
 

@@ -1,6 +1,7 @@
 //! Serialize a Rust data structure into Named Binary Tag data.
 
 use std::io;
+use Endianness;
 
 use flate2::write::{GzEncoder, ZlibEncoder};
 use flate2::Compression;
@@ -15,34 +16,53 @@ use serde::ser::Error as SerError;
 /// Encode `value` in Named Binary Tag format to the given `io::Write`
 /// destination, with an optional header.
 #[inline]
-pub fn to_writer<'a, W, T>(dst: &mut W, value: &T, header: Option<&'a str>) -> Result<()>
+pub fn to_writer<'a, W, T>(
+    dst: &mut W,
+    value: &T,
+    header: Option<&'a str>,
+    endian: Endianness,
+) -> Result<()>
 where
     W: ?Sized + io::Write,
     T: ?Sized + ser::Serialize,
 {
-    let mut encoder = Encoder::new(dst, header);
+    let mut encoder = Encoder::new(dst, header, endian);
     value.serialize(&mut encoder)
 }
 
 /// Encode `value` in Named Binary Tag format to the given `io::Write`
 /// destination, with an optional header.
-pub fn to_gzip_writer<'a, W, T>(dst: &mut W, value: &T, header: Option<&'a str>) -> Result<()>
+pub fn to_gzip_writer<'a, W, T>(
+    dst: &mut W,
+    value: &T,
+    header: Option<&'a str>,
+    endian: Endianness,
+) -> Result<()>
 where
     W: ?Sized + io::Write,
     T: ?Sized + ser::Serialize,
 {
-    let mut encoder = Encoder::new(GzEncoder::new(dst, Compression::default()), header);
+    let mut encoder = Encoder::new(GzEncoder::new(dst, Compression::default()), header, endian);
     value.serialize(&mut encoder)
 }
 
 /// Encode `value` in Named Binary Tag format to the given `io::Write`
 /// destination, with an optional header.
-pub fn to_zlib_writer<'a, W, T>(dst: &mut W, value: &T, header: Option<&'a str>) -> Result<()>
+pub fn to_zlib_writer<'a, W, T>(
+    dst: &mut W,
+    value: &T,
+    header: Option<&'a str>,
+    endian: Endianness,
+) -> Result<()>
 where
     W: ?Sized + io::Write,
     T: ?Sized + ser::Serialize,
 {
-    let mut encoder = Encoder::new(ZlibEncoder::new(dst, Compression::default()), header);
+    let mut encoder = Encoder::new(
+        ZlibEncoder::new(dst, Compression::default()),
+        header,
+        endian,
+    );
     value.serialize(&mut encoder)
 }
 
@@ -55,6 +75,7 @@ where
 pub struct Encoder<'a, W> {
     writer: W,
     header: Option<&'a str>,
+    endian: Endianness,
 }
 
 impl<'a, W> Encoder<'a, W>
@@ -62,8 +83,12 @@ where
     W: io::Write,
 {
     /// Create an encoder with optional `header` from a given Writer.
-    pub fn new(writer: W, header: Option<&'a str>) -> Self {
-        Encoder { writer, header }
+    pub fn new(writer: W, header: Option<&'a str>, endian: Endianness) -> Self {
+        Encoder {
+            writer,
+            header,
+            endian,
+        }
     }
 
     /// Write the NBT tag and an optional header to the underlying writer.
@@ -71,8 +96,8 @@ where
     fn write_header(&mut self, tag: i8, header: Option<&str>) -> Result<()> {
         raw::write_bare_byte(&mut self.writer, tag)?;
         match header {
-            None => raw::write_bare_short(&mut self.writer, 0).map_err(From::from),
-            Some(h) => raw::write_bare_string(&mut self.writer, h).map_err(From::from),
+            None => raw::write_bare_short(&mut self.writer, 0, self.endian).map_err(From::from),
+            Some(h) => raw::write_bare_string(&mut self.writer, h, self.endian).map_err(From::from),
         }
     }
 }
@@ -118,7 +143,7 @@ where
                 raw::write_bare_byte(&mut outer.writer, 0x00)?;
             }
             // Write list/array length
-            raw::write_bare_int(&mut outer.writer, length)?;
+            raw::write_bare_int(&mut outer.writer, length, outer.endian)?;
         }
         Ok(Compound {
             outer,
@@ -144,7 +169,7 @@ where
                 self.outer,
                 Option::<String>::None,
             ))?;
-            raw::write_bare_int(&mut self.outer.writer, self.length)?;
+            raw::write_bare_int(&mut self.outer.writer, self.length, self.outer.endian)?;
             self.sigil = true;
         }
         value.serialize(&mut InnerEncoder::from_outer(self.outer))
@@ -315,32 +340,32 @@ where
 
     #[inline]
     fn serialize_i16(self, value: i16) -> Result<()> {
-        raw::write_bare_short(&mut self.outer.writer, value).map_err(From::from)
+        raw::write_bare_short(&mut self.outer.writer, value, self.outer.endian).map_err(From::from)
     }
 
     #[inline]
     fn serialize_i32(self, value: i32) -> Result<()> {
-        raw::write_bare_int(&mut self.outer.writer, value).map_err(From::from)
+        raw::write_bare_int(&mut self.outer.writer, value, self.outer.endian).map_err(From::from)
     }
 
     #[inline]
     fn serialize_i64(self, value: i64) -> Result<()> {
-        raw::write_bare_long(&mut self.outer.writer, value).map_err(From::from)
+        raw::write_bare_long(&mut self.outer.writer, value, self.outer.endian).map_err(From::from)
     }
 
     #[inline]
     fn serialize_f32(self, value: f32) -> Result<()> {
-        raw::write_bare_float(&mut self.outer.writer, value).map_err(From::from)
+        raw::write_bare_float(&mut self.outer.writer, value, self.outer.endian).map_err(From::from)
     }
 
     #[inline]
     fn serialize_f64(self, value: f64) -> Result<()> {
-        raw::write_bare_double(&mut self.outer.writer, value).map_err(From::from)
+        raw::write_bare_double(&mut self.outer.writer, value, self.outer.endian).map_err(From::from)
     }
 
     #[inline]
     fn serialize_str(self, value: &str) -> Result<()> {
-        raw::write_bare_string(&mut self.outer.writer, value).map_err(From::from)
+        raw::write_bare_string(&mut self.outer.writer, value, self.outer.endian).map_err(From::from)
     }
 
     #[inline]
@@ -453,7 +478,7 @@ where
     }
 
     fn serialize_str(self, value: &str) -> Result<()> {
-        raw::write_bare_string(&mut self.outer.writer, value)
+        raw::write_bare_string(&mut self.outer.writer, value, self.outer.endian)
     }
 }
 

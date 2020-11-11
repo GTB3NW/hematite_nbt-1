@@ -106,36 +106,36 @@ impl Blob {
 
     /// Writes the binary representation of this `Blob` to an `io::Write`
     /// destination.
-    pub fn to_writer<W>(&self, mut dst: &mut W) -> Result<()>
+    pub fn to_writer<W>(&self, mut dst: &mut W, endian: Endianness) -> Result<()>
     where
         W: io::Write,
     {
         dst.write_u8(0x0a)?;
-        raw::write_bare_string(&mut dst, &self.title)?;
+        raw::write_bare_string(&mut dst, &self.title, endian)?;
         for (name, ref nbt) in self.content.iter() {
             dst.write_u8(nbt.id())?;
-            raw::write_bare_string(&mut dst, name)?;
-            nbt.to_writer(&mut dst)?;
+            raw::write_bare_string(&mut dst, name, endian)?;
+            nbt.to_writer(&mut dst, endian)?;
         }
         raw::close_nbt(&mut dst)
     }
 
     /// Writes the binary representation of this `Blob`, compressed using
     /// the Gzip format, to an `io::Write` destination.
-    pub fn to_gzip_writer<W>(&self, dst: &mut W) -> Result<()>
+    pub fn to_gzip_writer<W>(&self, dst: &mut W, endian: Endianness) -> Result<()>
     where
         W: io::Write,
     {
-        self.to_writer(&mut GzEncoder::new(dst, Compression::default()))
+        self.to_writer(&mut GzEncoder::new(dst, Compression::default()), endian)
     }
 
     /// Writes the binary representation of this `Blob`, compressed using
     /// the Zlib format, to an `io::Write` dst.
-    pub fn to_zlib_writer<W>(&self, dst: &mut W) -> Result<()>
+    pub fn to_zlib_writer<W>(&self, dst: &mut W, endian: Endianness) -> Result<()>
     where
         W: io::Write,
     {
-        self.to_writer(&mut ZlibEncoder::new(dst, Compression::default()))
+        self.to_writer(&mut ZlibEncoder::new(dst, Compression::default()), endian)
     }
 
     /// Insert an `Value` with a given name into this `Blob` object. This
