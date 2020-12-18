@@ -6,6 +6,7 @@ extern crate nbt;
 
 use std::collections::HashMap;
 
+use nbt::Endianness;
 use serde::{Serialize, Serializer};
 
 /// Helper function that asserts data of type T can be serialized into and
@@ -17,10 +18,10 @@ where
 {
     let mut dst = Vec::with_capacity(bytes.len());
 
-    nbt::ser::to_writer(&mut dst, &nbt, name).expect("NBT serialization.");
+    nbt::ser::to_writer(&mut dst, &nbt, name, Endianness::BigEndian).expect("NBT serialization.");
     assert_eq!(bytes, &dst[..]);
 
-    let read: T = nbt::de::from_reader(bytes).expect("NBT deserialization.");
+    let read: T = nbt::de::from_reader(bytes, Endianness::BigEndian).expect("NBT deserialization.");
     assert_eq!(read, nbt);
 }
 
@@ -362,7 +363,7 @@ fn serialize_custom_serializer_array() {
 
     let mut dst = Vec::with_capacity(bytes.len());
 
-    nbt::ser::to_writer(&mut dst, &nbt, None).expect("NBT serialization.");
+    nbt::ser::to_writer(&mut dst, &nbt, None, Endianness::BigEndian).expect("NBT serialization.");
     assert_eq!(bytes, &dst[..]);
 }
 

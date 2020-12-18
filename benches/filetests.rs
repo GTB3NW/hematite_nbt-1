@@ -16,6 +16,7 @@ use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 
 use nbt::de::from_gzip_reader;
 use nbt::ser::to_writer;
+use nbt::Endianness;
 
 mod data {
     include!("../tests/data.rs.in");
@@ -30,32 +31,34 @@ where
     file.read_to_end(&mut contents).unwrap();
     let mut src = std::io::Cursor::new(&contents[..]);
     file.seek(SeekFrom::Start(0)).unwrap();
-    let nbt_struct: T = from_gzip_reader(&mut file).unwrap();
+    let nbt_struct: T = from_gzip_reader(&mut file, Endianness::BigEndian).unwrap();
     file.seek(SeekFrom::Start(0)).unwrap();
-    let nbt_blob = nbt::Blob::from_gzip_reader(&mut file).unwrap();
+    let nbt_blob = nbt::Blob::from_gzip_reader(&mut file, Endianness::BigEndian).unwrap();
 
     let mut group = c.benchmark_group(filename);
     group.throughput(Throughput::Bytes(contents.len() as u64));
     group.bench_function("Deserialize As Struct", |b| {
         b.iter(|| {
             src.seek(SeekFrom::Start(0)).unwrap();
-            let _: T = from_gzip_reader(&mut src).unwrap();
+            let _: T = from_gzip_reader(&mut src, Endianness::BigEndian).unwrap();
         })
     });
     group.bench_function("Deserialize As Blob", |b| {
         b.iter(|| {
             src.seek(SeekFrom::Start(0)).unwrap();
-            nbt::Blob::from_gzip_reader(&mut src).unwrap();
+            nbt::Blob::from_gzip_reader(&mut src, Endianness::BigEndian).unwrap();
         })
     });
     group.bench_function("Serialize As Struct", |b| {
         b.iter(|| {
-            to_writer(&mut io::sink(), &nbt_struct, None).unwrap();
+            to_writer(&mut io::sink(), &nbt_struct, None, Endianness::BigEndian).unwrap();
         })
     });
     group.bench_function("Serialize As Blob", |b| {
         b.iter(|| {
-            nbt_blob.to_writer(&mut io::sink()).unwrap();
+            nbt_blob
+                .to_writer(&mut io::sink(), Endianness::BigEndian)
+                .unwrap();
         })
     });
     group.finish();

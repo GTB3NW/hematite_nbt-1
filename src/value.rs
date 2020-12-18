@@ -1,8 +1,8 @@
-use crate::Map;
+use crate::{Endianness, Map};
 use std::fmt;
 use std::io;
 
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use error::{Error, Result};
 use raw;
@@ -66,19 +66,19 @@ impl Value {
     }
 
     /// Writes the payload of this `Value` to an `io::Write` destination.
-    pub fn to_writer<W>(&self, mut dst: &mut W) -> Result<()>
+    pub fn to_writer<W>(&self, mut dst: &mut W, endian: raw::Endianness) -> Result<()>
     where
         W: io::Write,
     {
         match *self {
             Value::Byte(val) => raw::write_bare_byte(dst, val),
-            Value::Short(val) => raw::write_bare_short(dst, val),
-            Value::Int(val) => raw::write_bare_int(dst, val),
-            Value::Long(val) => raw::write_bare_long(dst, val),
-            Value::Float(val) => raw::write_bare_float(dst, val),
-            Value::Double(val) => raw::write_bare_double(dst, val),
-            Value::ByteArray(ref vals) => raw::write_bare_byte_array(dst, &vals[..]),
-            Value::String(ref val) => raw::write_bare_string(dst, &val),
+            Value::Short(val) => raw::write_bare_short(dst, val, endian),
+            Value::Int(val) => raw::write_bare_int(dst, val, endian),
+            Value::Long(val) => raw::write_bare_long(dst, val, endian),
+            Value::Float(val) => raw::write_bare_float(dst, val, endian),
+            Value::Double(val) => raw::write_bare_double(dst, val, endian),
+            Value::ByteArray(ref vals) => raw::write_bare_byte_array(dst, &vals[..], endian),
+            Value::String(ref val) => raw::write_bare_string(dst, &val, endian),
             Value::List(ref vals) => {
                 // This is a bit of a trick: if the list is empty, don't bother
                 // checking its type.
@@ -95,7 +95,7 @@ impl Value {
                         if nbt.id() != first_id {
                             return Err(Error::HeterogeneousList);
                         }
-                        nbt.to_writer(dst)?;
+                        nbt.to_writer(dst, endian)?;
                     }
                 }
                 Ok(())
@@ -104,38 +104,41 @@ impl Value {
                 for (name, ref nbt) in vals {
                     // Write the header for the tag.
                     dst.write_u8(nbt.id())?;
-                    raw::write_bare_string(dst, name)?;
-                    nbt.to_writer(dst)?;
+                    raw::write_bare_string(dst, name, endian)?;
+                    nbt.to_writer(dst, endian)?;
                 }
                 raw::close_nbt(&mut dst)
             }
-            Value::IntArray(ref vals) => raw::write_bare_int_array(dst, &vals[..]),
-            Value::LongArray(ref vals) => raw::write_bare_long_array(dst, &vals[..]),
+            Value::IntArray(ref vals) => raw::write_bare_int_array(dst, &vals[..], endian),
+            Value::LongArray(ref vals) => raw::write_bare_long_array(dst, &vals[..], endian),
         }
     }
 
     /// Reads the payload of an `Value` with a given type ID from an
     /// `io::Read` source.
-    pub fn from_reader<R>(id: u8, src: &mut R) -> Result<Value>
+    pub fn from_reader<R>(id: u8, src: &mut R, endian: raw::Endianness) -> Result<Value>
     where
         R: io::Read,
     {
         match id {
             0x01 => Ok(Value::Byte(raw::read_bare_byte(src)?)),
-            0x02 => Ok(Value::Short(raw::read_bare_short(src)?)),
-            0x03 => Ok(Value::Int(raw::read_bare_int(src)?)),
-            0x04 => Ok(Value::Long(raw::read_bare_long(src)?)),
-            0x05 => Ok(Value::Float(raw::read_bare_float(src)?)),
-            0x06 => Ok(Value::Double(raw::read_bare_double(src)?)),
-            0x07 => Ok(Value::ByteArray(raw::read_bare_byte_array(src)?)),
-            0x08 => Ok(Value::String(raw::read_bare_string(src)?)),
+            0x02 => Ok(Value::Short(raw::read_bare_short(src, endian)?)),
+            0x03 => Ok(Value::Int(raw::read_bare_int(src, endian)?)),
+            0x04 => Ok(Value::Long(raw::read_bare_long(src, endian)?)),
+            0x05 => Ok(Value::Float(raw::read_bare_float(src, endian)?)),
+            0x06 => Ok(Value::Double(raw::read_bare_double(src, endian)?)),
+            0x07 => Ok(Value::ByteArray(raw::read_bare_byte_array(src, endian)?)),
+            0x08 => Ok(Value::String(raw::read_bare_string(src, endian)?)),
             0x09 => {
                 // List
                 let id = src.read_u8()?;
-                let len = src.read_i32::<BigEndian>()? as usize;
+                let len = match endian {
+                    Endianness::LittleEndian => src.read_i32::<LittleEndian>()? as usize,
+                    Endianness::BigEndian => src.read_i32::<BigEndian>()? as usize,
+                };
                 let mut buf = Vec::with_capacity(len);
                 for _ in 0..len {
-                    buf.push(Value::from_reader(id, src)?);
+                    buf.push(Value::from_reader(id, src, endian)?);
                 }
                 Ok(Value::List(buf))
             }
@@ -143,17 +146,17 @@ impl Value {
                 // Compound
                 let mut buf = Map::new();
                 loop {
-                    let (id, name) = raw::emit_next_header(src)?;
+                    let (id, name) = raw::emit_next_header(src, endian)?;
                     if id == 0x00 {
                         break;
                     }
-                    let tag = Value::from_reader(id, src)?;
+                    let tag = Value::from_reader(id, src, endian)?;
                     buf.insert(name, tag);
                 }
                 Ok(Value::Compound(buf))
             }
-            0x0b => Ok(Value::IntArray(raw::read_bare_int_array(src)?)),
-            0x0c => Ok(Value::LongArray(raw::read_bare_long_array(src)?)),
+            0x0b => Ok(Value::IntArray(raw::read_bare_int_array(src, endian)?)),
+            0x0c => Ok(Value::LongArray(raw::read_bare_long_array(src, endian)?)),
             e => Err(Error::InvalidTypeId(e)),
         }
     }
